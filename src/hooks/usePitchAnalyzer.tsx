@@ -8,50 +8,59 @@ export const usePitchAnalyzer = () => {
 
 	const audioContextRef = useRef<AudioContext | null>(null);
 	const analyserRef = useRef<AnalyserNode | null>(null);
-	const sourceRef = useRef<
-		MediaStreamAudioSourceNode | MediaElementAudioSourceNode | null
-	>(null);
+
+	const mediaElementSourceRef = useRef<MediaElementAudioSourceNode | null>(
+		null,
+	);
+
+	const streamRef = useRef<MediaStream | null>(null);
 
 	const startAnalyzer = (
-		sourceStream: MediaStream | HTMLAudioElement,
+		source: MediaStream | HTMLAudioElement,
 		canvas: HTMLCanvasElement,
-		sampleRateSetter: (note: string) => void,
+		setNote: (note: string) => void,
 		pitchTimelineRef: React.MutableRefObject<PitchRibbonHandle | null>,
 	) => {
+		stopAnalyzer();
+
 		isDetectingRef.current = true;
 
 		if (!audioContextRef.current) {
-			const audioContext = new AudioContext();
-			audioContextRef.current = audioContext;
+			audioContextRef.current = new AudioContext();
+		}
 
-			const analyser = audioContext.createAnalyser();
-			analyser.fftSize = 2048;
+		const audioContext = audioContextRef.current;
 
-			analyserRef.current = analyser;
+		const analyser = audioContext.createAnalyser();
+		analyser.fftSize = 2048;
 
-			if (sourceStream instanceof MediaStream) {
-				const source = audioContext.createMediaStreamSource(sourceStream);
-				source.connect(analyser);
-				sourceRef.current = source;
-			} else {
-				const source = audioContext.createMediaElementSource(sourceStream);
-				source.connect(analyser);
-				analyser.connect(audioContext.destination);
-				sourceRef.current = source;
+		analyserRef.current = analyser;
+
+		if (source instanceof MediaStream) {
+			streamRef.current = source;
+
+			const streamSource = audioContext.createMediaStreamSource(source);
+			streamSource.connect(analyser);
+		} else {
+			// IMPORTANT: create only once
+			if (!mediaElementSourceRef.current) {
+				mediaElementSourceRef.current =
+					audioContext.createMediaElementSource(source);
 			}
+
+			mediaElementSourceRef.current.connect(analyser);
+			analyser.connect(audioContext.destination);
 		}
 
-		if (analyserRef.current) {
-			startAudioProcessing(
-				analyserRef.current,
-				canvas,
-				audioContextRef.current!.sampleRate,
-				sampleRateSetter,
-				animationRef,
-				isDetectingRef,
-				pitchTimelineRef,
-			);
-		}
+		startAudioProcessing(
+			analyser,
+			canvas,
+			audioContext.sampleRate,
+			setNote,
+			animationRef,
+			isDetectingRef,
+			pitchTimelineRef,
+		);
 	};
 
 	const stopAnalyzer = () => {
@@ -61,6 +70,12 @@ export const usePitchAnalyzer = () => {
 			cancelAnimationFrame(animationRef.current);
 			animationRef.current = null;
 		}
+
+		streamRef.current?.getTracks().forEach((track) => track.stop());
+		streamRef.current = null;
+
+		analyserRef.current?.disconnect();
+		analyserRef.current = null;
 	};
 
 	return { startAnalyzer, stopAnalyzer };

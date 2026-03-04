@@ -36,6 +36,7 @@ interface PitchPoint {
 
 export interface PitchRibbonHandle {
 	addPitch: (freq: number) => void;
+	reset: () => void;
 }
 
 interface Props {
@@ -69,10 +70,16 @@ const PitchRibbonTimeline = forwardRef<PitchRibbonHandle, Props>(
 					} else {
 						smoothRef.current = smoothRef.current * 0.7 + midi * 0.3;
 					}
+
 					midi = smoothRef.current;
 				}
 
 				bufferRef.current.push({ time: now, midi });
+			},
+
+			reset() {
+				bufferRef.current = [];
+				smoothRef.current = null;
 			},
 		}));
 
