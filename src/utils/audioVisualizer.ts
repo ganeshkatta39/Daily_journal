@@ -21,13 +21,12 @@ export function startAudioProcessing(
 
 		// ---- Pitch Detection ----
 		const freq = autoCorrelate(dataArray, sampleRate);
-
+		if ((window as any).addPitchToTimeline) {
+			(window as any).addPitchToTimeline(freq);
+		}
+		pitchTimelineRef.current?.addPitch(freq);
 		frameCount++; // modified to update only 12times per sec instead of original 60
 		if (freq !== -1 && frameCount % 5 === 0) {
-			if ((window as any).addPitchToTimeline) {
-				(window as any).addPitchToTimeline(freq);
-			}
-			pitchTimelineRef.current?.addPitch(freq);
 			setNote(getNoteFromFrequency(freq));
 		}
 
