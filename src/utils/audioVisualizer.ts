@@ -10,7 +10,7 @@ export function startAudioProcessing(
 ) {
   const ctx = canvas.getContext("2d");
   const dataArray = new Float32Array(analyser.fftSize);
-
+  let frameCount = 0;
   const loop = () => {
     if (!isDetectingRef.current) return;
 
@@ -20,7 +20,8 @@ export function startAudioProcessing(
 
     // ---- Pitch Detection ----
     const freq = autoCorrelate(dataArray, sampleRate);
-    if (freq !== -1) {
+    frameCount++; // modified to update only 12times per sec instead of original 60
+    if (freq !== -1 && frameCount % 5 === 0) {
       setNote(getNoteFromFrequency(freq));
     }
 
