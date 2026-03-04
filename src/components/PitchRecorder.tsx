@@ -2,22 +2,25 @@ import React, { useRef, useState } from "react";
 import RecorderControls from "./RecorderControls";
 import WaveformCanvas from "./WaveformCanvas";
 import AudioPlayer from "./AudioPlayer";
-import { autoCorrelate, getNoteFromFrequency } from "../utils/pitchUtils";
+import { startAudioProcessing } from "../utils/audioVisualizer";
 
 const PitchRecorder: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
   const [note, setNote] = useState<string>("--");
-
+  const isDetectingRef = useRef(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number | null>(null);
+  const playbackAudioContextRef = useRef<AudioContext | null>(null);
+  const playbackAnalyserRef = useRef<AnalyserNode | null>(null);
+  const playbackSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
+    isDetectingRef.current = true;
     const mediaRecorder = new MediaRecorder(stream);
     mediaRecorderRef.current = mediaRecorder;
     audioChunksRef.current = [];
@@ -43,79 +46,78 @@ const PitchRecorder: React.FC = () => {
 
     const dataArray = new Float32Array(analyser.fftSize);
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
 
-    const draw = () => {
-      animationRef.current = requestAnimationFrame(draw);
-
-      analyser.getFloatTimeDomainData(dataArray);
-
-      const freq = autoCorrelate(dataArray, audioContext.sampleRate);
-
-      if (freq !== -1) {
-        setNote(getNoteFromFrequency(freq));
-      }
-
-      if (!canvas || !ctx) return;
-
-      ctx.fillStyle = "black";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.strokeStyle = "lime";
-      ctx.beginPath();
-
-      const sliceWidth = canvas.width / dataArray.length;
-      let x = 0;
-
-      for (let i = 0; i < dataArray.length; i++) {
-        const y = (dataArray[i] * canvas.height) / 2 + canvas.height / 2;
-
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-
-        x += sliceWidth;
-      }
-
-      ctx.stroke();
-    };
-
-    draw();
+    if (canvas) {
+      startAudioProcessing(
+        analyser,
+        canvas,
+        audioContext.sampleRate,
+        setNote,
+        animationRef,
+        isDetectingRef,
+      );
+    }
     setIsRecording(true);
   };
 
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+
+    isDetectingRef.current = false;
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    setNote("--");
     setIsRecording(false);
   };
 
   const startPlaybackAnalysis = () => {
     if (!audioRef.current) return;
 
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaElementSource(audioRef.current);
-    const analyser = audioContext.createAnalyser();
+    isDetectingRef.current = true;
 
-    analyser.fftSize = 2048;
+    if (!playbackAudioContextRef.current) {
+      const audioContext = new AudioContext();
+      playbackAudioContextRef.current = audioContext;
 
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      playbackAnalyserRef.current = analyser;
 
-    const dataArray = new Float32Array(analyser.fftSize);
+      const source = audioContext.createMediaElementSource(audioRef.current);
+      playbackSourceRef.current = source;
 
-    const detect = () => {
-      analyser.getFloatTimeDomainData(dataArray);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+    }
 
-      const freq = autoCorrelate(dataArray, audioContext.sampleRate);
+    const analyser = playbackAnalyserRef.current;
+    const canvas = canvasRef.current;
 
-      if (freq !== -1) {
-        setNote(getNoteFromFrequency(freq));
-      }
+    if (analyser && canvas) {
+      startAudioProcessing(
+        analyser,
+        canvas,
+        playbackAudioContextRef.current!.sampleRate,
+        setNote,
+        animationRef,
+        isDetectingRef,
+      );
+    }
+  };
 
-      requestAnimationFrame(detect);
-    };
+  const stop_detection = () => {
+    isDetectingRef.current = false;
 
-    detect();
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+
+    setNote("--");
   };
 
   return (
@@ -137,6 +139,7 @@ const PitchRecorder: React.FC = () => {
           audioURL={audioURL}
           audioRef={audioRef}
           onPlay={startPlaybackAnalysis}
+          onEnded={stop_detection}
         />
       )}
     </div>

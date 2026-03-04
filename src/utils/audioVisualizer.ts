@@ -1,16 +1,30 @@
-export function drawWaveform(
+import { autoCorrelate, getNoteFromFrequency } from "./pitchUtils";
+
+export function startAudioProcessing(
   analyser: AnalyserNode,
   canvas: HTMLCanvasElement,
-  dataArray: Float32Array<ArrayBuffer>,
+  sampleRate: number,
+  setNote: (note: string) => void,
   animationRef: React.MutableRefObject<number | null>,
+  isDetectingRef: React.MutableRefObject<boolean>,
 ) {
   const ctx = canvas.getContext("2d");
+  const dataArray = new Float32Array(analyser.fftSize);
 
-  const draw = () => {
-    animationRef.current = requestAnimationFrame(draw);
+  const loop = () => {
+    if (!isDetectingRef.current) return;
+
+    animationRef.current = requestAnimationFrame(loop);
 
     analyser.getFloatTimeDomainData(dataArray);
 
+    // ---- Pitch Detection ----
+    const freq = autoCorrelate(dataArray, sampleRate);
+    if (freq !== -1) {
+      setNote(getNoteFromFrequency(freq));
+    }
+
+    // ---- Waveform Drawing ----
     if (!ctx) return;
 
     ctx.fillStyle = "black";
@@ -34,28 +48,5 @@ export function drawWaveform(
     ctx.stroke();
   };
 
-  draw();
-}
-
-import { autoCorrelate, getNoteFromFrequency } from "./pitchUtils";
-
-export function detectPitch(
-  analyser: AnalyserNode,
-  sampleRate: number,
-  dataArray: Float32Array<ArrayBuffer>,
-  setNote: (note: string) => void,
-) {
-  const detect = () => {
-    analyser.getFloatTimeDomainData(dataArray);
-
-    const freq = autoCorrelate(dataArray, sampleRate);
-
-    if (freq !== -1) {
-      setNote(getNoteFromFrequency(freq));
-    }
-
-    requestAnimationFrame(detect);
-  };
-
-  detect();
+  loop();
 }
