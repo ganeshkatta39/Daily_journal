@@ -43,10 +43,8 @@ const PitchRecorder: React.FC = () => {
 
     analyser.fftSize = 2048;
     source.connect(analyser);
-
-    const dataArray = new Float32Array(analyser.fftSize);
+  
     const canvas = canvasRef.current;
-
     if (canvas) {
       startAudioProcessing(
         analyser,
