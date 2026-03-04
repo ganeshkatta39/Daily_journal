@@ -1,35 +1,31 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import "./App.css";
+import { NoteCard } from "./components/NoteCard";
+import RecordView from "./components/RecordView";
+import VoiceRecorder from "./components/VoiceRecorder";
+import VoiceRecorderWithWaveform from "./components/VoiceRecorderWithWaveform";
+import PitchRecorder from "./components/PitchRecorder";
+
+import LiveWaveformRecorder from "./components/LiveWaveformRecorder";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+  const card = {
+    id: "12345",
+    title: "",
+    content: "",
+    date: "12345",
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      {/* <VoiceRecorder />
+      <VoiceRecorderWithWaveform />
+      <RecordView /> */}
+      <LiveWaveformRecorder />
+      <PitchRecorder />
     </>
-  )
+  );
 }
 
-export default App
+export default App;
