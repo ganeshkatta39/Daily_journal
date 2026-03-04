@@ -9,6 +9,8 @@ import type { PitchTimelineHandle } from "./PitchNoteTimeline";
 import PitchRibbonTimeline from "./PitchRibbonTimeline";
 import type { PitchRibbonHandle } from "./PitchRibbonTimeline";
 
+import { usePitchAnalyzer } from "../hooks/usePitchAnalyzer";
+
 const PitchRecorder: React.FC = () => {
 	const [isRecording, setIsRecording] = useState(false);
 	const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -24,46 +26,16 @@ const PitchRecorder: React.FC = () => {
 	const playbackSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
 	const pitchTimelineRef = useRef<PitchTimelineHandle | null>(null);
 	const [snapToNote, setSnapToNote] = useState(false);
+	const { startAnalyzer, stopAnalyzer } = usePitchAnalyzer();
 
 	const startRecording = async () => {
 		const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		isDetectingRef.current = true;
-		const mediaRecorder = new MediaRecorder(stream);
-		mediaRecorderRef.current = mediaRecorder;
-		audioChunksRef.current = [];
-
-		mediaRecorder.ondataavailable = (event: BlobEvent) => {
-			audioChunksRef.current.push(event.data);
-		};
-
-		mediaRecorder.onstop = () => {
-			const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-			const url = URL.createObjectURL(blob);
-			setAudioURL(url);
-		};
-
-		mediaRecorder.start();
-
-		const audioContext = new AudioContext();
-		const source = audioContext.createMediaStreamSource(stream);
-		const analyser = audioContext.createAnalyser();
-
-		analyser.fftSize = 2048;
-		source.connect(analyser);
 
 		const canvas = canvasRef.current;
+
 		if (canvas) {
-			startAudioProcessing(
-				analyser,
-				canvas,
-				audioContext.sampleRate,
-				setNote,
-				animationRef,
-				isDetectingRef,
-				pitchTimelineRef,
-			);
+			startAnalyzer(stream, canvas, setNote, pitchTimelineRef);
 		}
-		setIsRecording(true);
 	};
 
 	const stopRecording = () => {
