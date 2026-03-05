@@ -5,10 +5,8 @@ import type { PitchRibbonHandle } from "../components/PitchRibbonTimeline";
 export const usePitchAnalyzer = () => {
 	const animationRef = useRef<number | null>(null);
 	const isDetectingRef = useRef(false);
-
 	const audioContextRef = useRef<AudioContext | null>(null);
 	const analyserRef = useRef<AnalyserNode | null>(null);
-
 	const mediaElementSourceRef = useRef<MediaElementAudioSourceNode | null>(
 		null,
 	);
@@ -32,7 +30,7 @@ export const usePitchAnalyzer = () => {
 		const audioContext = audioContextRef.current;
 
 		const analyser = audioContext.createAnalyser();
-		analyser.fftSize = 2048;
+		analyser.fftSize = 4096;
 
 		analyserRef.current = analyser;
 
