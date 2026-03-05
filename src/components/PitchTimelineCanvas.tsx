@@ -15,7 +15,7 @@ const PitchTimelineCanvas: React.FC<PitchTimelineCanvasProps> = ({
 }) => {
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const pitchBufferRef = useRef<number[]>([]);
-	const startTimeRef = useRef<number>(performance.now());
+	// const startTimeRef = useRef<number>(performance.now());
 
 	const addPitch = (freq: number) => {
 		pitchBufferRef.current.push(freq);
@@ -26,8 +26,8 @@ const PitchTimelineCanvas: React.FC<PitchTimelineCanvasProps> = ({
 		const ctx = canvas.getContext("2d")!;
 
 		const draw = () => {
-			const now = performance.now();
-			const elapsed = (now - startTimeRef.current) / 1000;
+			// const now = performance.now();
+			// const elapsed = (now - startTimeRef.current) / 1000;
 
 			ctx.fillStyle = "black";
 			ctx.fillRect(0, 0, width, height);
