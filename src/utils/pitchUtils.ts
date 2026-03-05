@@ -1,3 +1,67 @@
+import { YIN } from "pitchfinder";
+
+const yinDetector = YIN({
+	threshold: 0.1,
+});
+
+let lastPitch: number | null = null;
+
+const pitchBuffer: number[] = [];
+const MEDIAN_WINDOW = 5;
+
+function getRMS(buffer: Float32Array) {
+	let sum = 0;
+
+	for (let i = 0; i < buffer.length; i++) {
+		sum += buffer[i] * buffer[i];
+	}
+
+	return Math.sqrt(sum / buffer.length);
+}
+
+export function detectPitch(buffer: Float32Array) {
+	const rms = getRMS(buffer);
+
+	// noise gate
+	if (rms < 0.005) {
+		return lastPitch ?? -1;
+	}
+	// // for a discontued line
+	// if (rms < 0.01) {
+	// 	return -1;
+	// }
+
+	const pitch = yinDetector(buffer);
+
+	if (!pitch || pitch < 80 || pitch > 1000) {
+		return lastPitch ?? -1;
+	}
+
+	// smoothing
+	if (lastPitch === null) {
+		lastPitch = pitch;
+	} else {
+		lastPitch = lastPitch * 0.8 + pitch * 0.2;
+	}
+
+	// median filter
+	pitchBuffer.push(lastPitch);
+
+	if (pitchBuffer.length > MEDIAN_WINDOW) {
+		pitchBuffer.shift();
+	}
+
+	const sorted = [...pitchBuffer].sort((a, b) => a - b);
+	const median = sorted[Math.floor(sorted.length / 2)];
+
+	return median;
+}
+
+export function resetPitchDetector() {
+	lastPitch = null;
+	pitchBuffer.length = 0;
+}
+
 export const getNoteFromFrequency = (frequency: number) => {
 	const noteNames = [
 		"C",
@@ -19,61 +83,4 @@ export const getNoteFromFrequency = (frequency: number) => {
 	const octave = Math.floor(midi / 12) - 1;
 
 	return `${noteNames[noteIndex]}${octave}`;
-};
-
-export const autoCorrelate = (buffer: Float32Array, sampleRate: number) => {
-	let SIZE = buffer.length;
-	let rms = 0;
-
-	for (let i = 0; i < SIZE; i++) {
-		rms += buffer[i] * buffer[i];
-	}
-
-	rms = Math.sqrt(rms / SIZE);
-	if (rms < 0.01) return -1;
-
-	let r1 = 0,
-		r2 = SIZE - 1;
-
-	for (let i = 0; i < SIZE / 2; i++) {
-		if (Math.abs(buffer[i]) < 0.2) {
-			r1 = i;
-			break;
-		}
-	}
-
-	for (let i = 1; i < SIZE / 2; i++) {
-		if (Math.abs(buffer[SIZE - i]) < 0.2) {
-			r2 = SIZE - i;
-			break;
-		}
-	}
-
-	buffer = buffer.slice(r1, r2);
-	SIZE = buffer.length;
-
-	const c = new Array(SIZE).fill(0);
-
-	for (let i = 0; i < SIZE; i++) {
-		for (let j = 0; j < SIZE - i; j++) {
-			c[i] += buffer[j] * buffer[j + i];
-		}
-	}
-
-	let d = 0;
-	while (c[d] > c[d + 1]) d++;
-
-	let maxval = -1;
-	let maxpos = -1;
-
-	for (let i = d; i < SIZE; i++) {
-		if (c[i] > maxval) {
-			maxval = c[i];
-			maxpos = i;
-		}
-	}
-
-	if (maxpos === 0) return -1;
-
-	return sampleRate / maxpos;
 };

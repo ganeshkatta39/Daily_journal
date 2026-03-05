@@ -17,6 +17,7 @@
 		"chart.js": "^4.5.1",
 		"lucide-react": "^0.575.0",
 		"nodemon": "^3.1.14",
+		"pitchfinder": "^2.3.4",
 		"react": "^19.2.0",
 		"react-chartjs-2": "^5.3.1",
 		"react-dom": "^19.2.0",

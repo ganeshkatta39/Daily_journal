@@ -1,14 +1,19 @@
-import { autoCorrelate, getNoteFromFrequency } from "./pitchUtils";
+import {
+	detectPitch,
+	resetPitchDetector,
+	getNoteFromFrequency,
+} from "./pitchUtils";
 
 export function startAudioProcessing(
 	analyser: AnalyserNode,
 	canvas: HTMLCanvasElement,
-	sampleRate: number,
+	_sampleRate: number,
 	setNote: (note: string) => void,
 	animationRef: React.MutableRefObject<number | null>,
 	isDetectingRef: React.MutableRefObject<boolean>,
 	pitchTimelineRef: React.MutableRefObject<any>,
 ) {
+	resetPitchDetector();
 	const ctx = canvas.getContext("2d");
 	const dataArray = new Float32Array(analyser.fftSize);
 	let frameCount = 0;
@@ -20,7 +25,7 @@ export function startAudioProcessing(
 		analyser.getFloatTimeDomainData(dataArray);
 
 		// ---- Pitch Detection ----
-		const freq = autoCorrelate(dataArray, sampleRate);
+		const freq = detectPitch(dataArray);
 		if ((window as any).addPitchToTimeline) {
 			(window as any).addPitchToTimeline(freq);
 		}
