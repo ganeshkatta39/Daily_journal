@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { detectPitch, getNoteFromFrequency } from "../utils/pitchUtils";
 
 const TEST_TONES = [
